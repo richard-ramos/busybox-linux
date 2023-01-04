@@ -30,10 +30,13 @@ cd ..
 
 cp ./src/linux-$KERNEL_VERSION/arch/x86_64/boot/bzImage ./
 
-# initrd
-mkdir initrd
-cd initrd
-  mkdir -p bin dev proc sys
+# initramfs
+rm -rf ./initramfs*
+mkdir initramfs
+cd initramfs
+  install -d ./{bin,dev,etc/rc.d,etc/init.d/{udhcpd,syslogd,klogd},usr/share/udhcpc}
+  install -d -m0555 ./{sys,proc}
+
   cd bin
     cp ../../src/busybox-$BUSYBOX_VERSION/busybox ./
     for prog in $(./busybox --list); do
@@ -41,15 +44,21 @@ cd initrd
     done
   cd ..
 
-  echo '#!/bin/sh' > init
-  echo 'mount -t sysfs sysfs /sys' >> init
-  echo 'mount -t proc proc /proc' >> init
-  echo 'mount -t devtmpfs udev /dev' >> init
-  echo 'sysctl -w kernel.printk="2 4 1 7"' >> init
-  echo '/bin/sh' >> init
-  echo 'poweroff -f' >> init
+  ln -s /bin/busybox ./init
 
-  chmod -R 777 .
+  # TODO: create directory structure
+  install -m0755 ../files/rcS ./etc/init.d/
+  install -m0755 ../files/inittab ./etc/
+  install -m0755 ../files/simple.script ./usr/share/udhcpc/default.script
+  install -m0755 ../files/resolv.conf ./etc/.
+  install -m0755 ../files/hostname ./etc/.
+  install -m0755 ../files/udhcpc.run ./etc/init.d/udhcpd/run
+  install -m0755 ../files/syslog.run ./etc/init.d/syslogd/run
+  install -m0755 ../files/klogd.run ./etc/init.d/klogd/run
 
-  find . | cpio -o -H newc > ../initrd.img
+  ln -s /etc/init.d/syslogd ./etc/rc.d
+  ln -s /etc/init.d/klogd ./etc/rc.d
+  ln -s /etc/init.d/udhcpd ./etc/rc.d
+
+  find . -print0 | cpio --null -ov --format=newc  > ../initramfs.cpio
 cd ..

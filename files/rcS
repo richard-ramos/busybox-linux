@@ -1,0 +1,19 @@
+#!/bin/sh
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mount -t devtmpfs udev /dev
+
+# hide kernel messages
+dmesg -n 1
+
+mkdir -m 755 /dev/pts
+mount -t devpts -o gid=5,mode=0620,noexec,nosuid devpts /dev/pts
+
+mkdir /dev/shm
+mount -t tmpfs -o nodev,nosuid,noexec shm /dev/shm
+
+ip link set up dev lo
+ip link set eth0 up
+
+hostname -F /etc/hostname
+
